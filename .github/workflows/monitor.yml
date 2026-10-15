@@ -2,7 +2,7 @@ name: Monitor listy oczekujących
 
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -13,23 +13,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Pobierz repozytorium
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ustaw Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Zainstaluj biblioteki
-        run: pip install requests beautifulsoup4
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
 
-      - name: Sprawdź listę
-        run: python monitor.py
+      - name: Run monitor
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python monitor.py
 
-      - name: Zapisz aktualny stan
+      - name: Save state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -37,9 +38,8 @@ jobs:
           git add last_position.txt
 
           if git diff --cached --quiet; then
-            echo "Brak zmiany stanu."
+            echo "No state change."
           else
             git commit -m "Update monitored position"
             git push
           fi
-          # scheduler test
