@@ -42,3 +42,4 @@ jobs:
             git commit -m "Update monitored position"
             git push
           fi
+          # scheduler test
