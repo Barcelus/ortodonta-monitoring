@@ -21,3 +21,5 @@ jobs:
 
       - name: Sprawdź listę
         run: python monitor.py
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
