@@ -12,8 +12,7 @@ response.raise_for_status()
 
 soup = BeautifulSoup(response.text, "html.parser")
 
-# Znajdź tabelę zawierającą nagłówki:
-# Pozycja | Imię | Telefon
+# Znajdź tabelę listy oczekujących
 target_table = None
 
 for table in soup.find_all("table"):
@@ -25,25 +24,34 @@ for table in soup.find_all("table"):
 if target_table is None:
     raise RuntimeError("Nie znaleziono tabeli listy oczekujących.")
 
-rows = target_table.find_all("tr")
+# Pobierz wszystkie wiersze z danymi
+rows = []
 
-data_rows = []
-for row in rows:
+for row in target_table.find_all("tr"):
     cells = row.find_all("td")
+
     if len(cells) >= 3:
-        data_rows.append([
+        values = [
             cell.get_text(" ", strip=True)
             for cell in cells[:3]
-        ])
+        ]
+        rows.append(values)
 
-if not data_rows:
+if not rows:
     raise RuntimeError("Tabela nie zawiera żadnych pozycji.")
 
-last_row = data_rows[-1]
+# Ostatni wiersz tabeli
+last_row = rows[-1]
 
 position, name, phone = last_row
 
-print("Ostatnia pozycja na liście:")
+print("Aktualny ostatni wpis:")
 print(f"Pozycja: {position}")
 print(f"Imię: {name}")
 print(f"Telefon: {phone}")
+
+# Sprawdź, czy pozycja 30 nadal istnieje
+if position == "30":
+    print("STATUS: Pozycja 30 nadal zajęta.")
+else:
+    print("STATUS: ZWOLNIŁO SIĘ MIEJSCE!")
