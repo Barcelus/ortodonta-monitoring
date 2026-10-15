@@ -1,6 +1,6 @@
 name: Monitor listy oczekujących
 
-on:
+'on':
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
