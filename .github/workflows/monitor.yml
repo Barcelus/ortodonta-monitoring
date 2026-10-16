@@ -2,7 +2,7 @@ name: Monitor listy oczekujących
 
 'on':
   schedule:
-    - cron: "*/59 * * * *"
+    - cron: "*/23 * * * *"
   workflow_dispatch:
 
 permissions:
