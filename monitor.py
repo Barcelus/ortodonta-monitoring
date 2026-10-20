@@ -1,3 +1,4 @@
+
 import os
 import json
 import requests
@@ -6,10 +7,10 @@ from bs4 import BeautifulSoup
 URL = "https://lucynaszymczak.pl/lista-oczekujacych/"
 DISCORD_WEBHOOK_URL = os.environ["DISCORD_WEBHOOK_URL"]
 
-STATE_FILE = "last_row.json"
+TARGET_NAME = "Bartłomiej"
+STATE_FILE = "bartlomiej_position.json"
 
-
-# Pobranie strony
+# Pobierz stronę
 response = requests.get(
     URL,
     headers={"User-Agent": "Mozilla/5.0"},
@@ -19,8 +20,7 @@ response.raise_for_status()
 
 soup = BeautifulSoup(response.text, "html.parser")
 
-
-# Znalezienie właściwej tabeli
+# Znajdź właściwą tabelę
 target_table = None
 
 for table in soup.find_all("table"):
@@ -33,53 +33,52 @@ for table in soup.find_all("table"):
 if target_table is None:
     raise RuntimeError("Nie znaleziono tabeli listy oczekujących.")
 
-
-# Odczytanie wszystkich wierszy tabeli
-rows = []
+# Znajdź wiersz Bartłomieja
+matches = []
 
 for row in target_table.find_all("tr"):
     cells = row.find_all("td")
 
     if len(cells) >= 3:
-        rows.append([
-            cell.get_text(" ", strip=True)
-            for cell in cells[:3]
-        ])
+        position = cells[0].get_text(" ", strip=True)
+        name = cells[1].get_text(" ", strip=True)
 
-if not rows:
-    raise RuntimeError("Tabela nie zawiera żadnych pozycji.")
+        if name.casefold() == TARGET_NAME.casefold():
+            matches.append(position)
 
+if not matches:
+    raise RuntimeError(
+        f"Nie znaleziono osoby {TARGET_NAME} w tabeli."
+    )
 
-# Aktualny ostatni wiersz
-current_row = rows[-1]
+if len(matches) > 1:
+    raise RuntimeError(
+        f"Znaleziono więcej niż jeden wiersz z imieniem {TARGET_NAME}. "
+        "Nie można jednoznacznie ustalić pozycji."
+    )
 
-print("Aktualny ostatni wiersz:")
-print(current_row)
+current_position = matches[0]
 
+print(f"Osoba: {TARGET_NAME}")
+print(f"Aktualna pozycja: {current_position}")
 
-# Odczytanie poprzedniego stanu
+# Odczytaj poprzednią pozycję
 if os.path.exists(STATE_FILE):
     with open(STATE_FILE, "r", encoding="utf-8") as file:
-        previous_row = json.load(file)
+        previous_position = json.load(file)
 else:
-    previous_row = None
+    previous_position = None
 
-print("Poprzedni ostatni wiersz:")
-print(previous_row)
+print(f"Poprzednia pozycja: {previous_position}")
 
-
-# Porównanie
-if previous_row is not None and previous_row != current_row:
-
-    old_position, old_name, old_phone = previous_row
-    new_position, new_name, new_phone = current_row
+# Wyślij alert przy zmianie numeru
+if previous_position is not None and previous_position != current_position:
 
     message = (
-        "🚨 ZMIANA NA LIŚCIE OCZEKUJĄCYCH!\n\n"
-        "Poprzedni ostatni wiersz:\n"
-        f"{old_position} | {old_name} | {old_phone}\n\n"
-        "Obecny ostatni wiersz:\n"
-        f"{new_position} | {new_name} | {new_phone}\n\n"
+        f"🚨 ZMIANA POZYCJI NA LIŚCIE!\n\n"
+        f"Osoba: {TARGET_NAME}\n"
+        f"Poprzednia pozycja: {previous_position}\n"
+        f"Nowa pozycja: {current_position}\n\n"
         f"Sprawdź listę:\n{URL}"
     )
 
@@ -88,25 +87,23 @@ if previous_row is not None and previous_row != current_row:
         json={"content": message},
         timeout=30
     )
-
     discord_response.raise_for_status()
 
-    print("ALERT: ostatni wiersz uległ zmianie. Wiadomość wysłana na Discorda.")
+    print("ALERT: wysłano powiadomienie na Discord.")
 
-elif previous_row is None:
-    print("Pierwsze uruchomienie - zapisuję stan bez wysyłania alertu.")
+elif previous_position is None:
+    print("Pierwsze uruchomienie: zapisuję pozycję bez alertu.")
 
 else:
-    print("Brak zmian w ostatnim wierszu.")
+    print("Pozycja bez zmian.")
 
-
-# Zapisanie aktualnego stanu
+# Zapisz aktualną pozycję
 with open(STATE_FILE, "w", encoding="utf-8") as file:
     json.dump(
-        current_row,
+        current_position,
         file,
         ensure_ascii=False,
         indent=2
     )
 
-print("Zapisano aktualny ostatni wiersz.")
+print(f"Zapisano pozycję: {current_position}")
